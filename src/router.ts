@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Facture from './pages/Facture.vue';
-import Devis from './pages/Devis.vue';
+import Facture from "./views/Facture.vue";
+import Devis from "./views/Devis.vue";
+
 
 const routes = [
     {
