@@ -28,13 +28,13 @@ const sections = ref([]);
 const ajouterTitre = () => {
   sections.value.push({
     titre: `Nouveau Titre`,
-    lignes: [{ label: "", quantite: 1, pu: 0 }],
+    lignes: [{ label: "", quantite: null, pu: null }],
   });
 };
 
 // Ajouter une ligne dans une section spécifique
 const ajouterLigne = (section) => {
-  section.lignes.push({ label: "", quantite: 1, pu: 0 });
+  section.lignes.push({ label: "", quantite: null, pu: null });
 };
 
 // Supprimer une ligne
@@ -142,30 +142,30 @@ const genererPDF = async () => {
     <h2 class="text-2xl font-bold mb-6 text-center">Créer une Facture</h2>
 
     <!-- Numéro de Facture -->
-    <div class="mb-6">
+    <div class="input-div">
       <label class="block font-semibold">Numéro de Facture :</label>
       <input v-model="numeroFacture" type="text" class="w-full border p-2 rounded" placeholder="Ex: FAC-001" />
     </div>
 
     <!-- Infos du client -->
     <div class="grid grid-cols-2 gap-4 mb-6">
-      <div class="mb-6">
+      <div class="input-div">
         <label class="block font-semibold">Date :</label>
         <input v-model="dateFacture" type="date" class="w-full border p-2 rounded" />
       </div>
-      <div>
+      <div class="input-div">
         <label class="block font-semibold">Nom du Client :</label>
         <input v-model="nomClient" type="text" class="w-full border p-2 rounded" />
       </div>
     </div>
 
-    <div class="mb-6">
+    <div class="input-div">
       <label class="block font-semibold">Adresse du Client :</label>
-      <textarea v-model="adresseClient" class="w-full border p-2 rounded"></textarea>
+      <input v-model="adresseClient" class="w-full border p-2 rounded"></input>
     </div>
 
-    <div class="mb-6">
-      <label class="block font-semibold">Code postal du Client :</label>
+    <div class="input-div">
+      <label class="block font-semibold">CP du Client :</label>
       <input v-model="cpClient" class="w-full border p-2 rounded"></input>
     </div>
 

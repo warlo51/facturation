@@ -28,13 +28,13 @@ const sections = ref([]);
 const ajouterTitre = () => {
   sections.value.push({
     titre: `Nouveau Titre`,
-    lignes: [{ label: "", quantite: 1, pu: 0 }],
+    lignes: [{ label: "", quantite: null, pu: null }],
   });
 };
 
 // Ajouter une ligne dans une section spécifique
 const ajouterLigne = (section) => {
-  section.lignes.push({ label: "", quantite: 1, pu: 0 });
+  section.lignes.push({ label: "", quantite: null, pu: null });
 };
 
 // Supprimer une ligne
@@ -160,29 +160,29 @@ const genererPDF = async () => {
     <h2 class="text-2xl font-bold mb-6 text-center">Créer un Devis</h2>
 
     <!-- Numéro de devis -->
-    <div class="mb-6">
+    <div class="input-div">
       <label class="block font-semibold">Numéro de Devis :</label>
       <input v-model="numeroDevis" type="text" class="w-full border p-2 rounded" placeholder="Ex: FAC-001" />
     </div>
 
     <!-- Infos du client -->
     <div class="grid grid-cols-2 gap-4 mb-6">
-      <div class="mb-6">
+      <div class="input-div">
         <label class="block font-semibold">Date :</label>
         <input v-model="dateDevis" type="date" class="w-full border p-2 rounded" />
       </div>
-      <div>
+      <div class="input-div">
         <label class="block font-semibold">Nom du Client :</label>
         <input v-model="nomClient" type="text" class="w-full border p-2 rounded" />
       </div>
     </div>
 
-    <div class="mb-6">
+    <div class="input-div">
       <label class="block font-semibold">Adresse du Client :</label>
       <input v-model="adresseClient" class="w-full border p-2 rounded"></input>
     </div>
-    <div class="mb-6">
-      <label class="block font-semibold">Code postal du Client :</label>
+    <div class="input-div">
+      <label class="block font-semibold">CP du Client :</label>
       <input v-model="cpClient" class="w-full border p-2 rounded"></input>
     </div>
 
@@ -201,9 +201,9 @@ const genererPDF = async () => {
       <!-- Tableau -->
       <div class="border rounded-lg overflow-hidden">
         <div v-for="(ligne, ligneIndex) in section.lignes" :key="ligneIndex" class="flex border-t p-2 items-center">
-          <input v-model="ligne.label" type="text" class="w-1/2 border p-2 rounded" placeholder="label"/>
-          <input v-model.number="ligne.quantite" type="number" min="1" class="w-1/6 border p-2 rounded text-center" placeholder="quantité" />
-          <input v-model.number="ligne.pu" type="number" min="0" step="0.01" class="w-1/6 border p-2 rounded text-center"  placeholder="pu"/>
+          <input v-model="ligne.label" type="text" class="w-1/2 border p-2 rounded" placeholder="Label"/>
+          <input v-model.number="ligne.quantite" type="number" min="1" class="w-1/6 border p-2 rounded text-center" placeholder="Quantité" />
+          <input v-model.number="ligne.pu" type="number" min="0" step="0.01" class="w-1/6 border p-2 rounded text-center"  placeholder="PU"/>
           <span class="w-1/6 text-center" >{{ totalLigne(ligne).toFixed(2) }} €</span>
           <button @click="supprimerLigne(section, ligneIndex)" class="text-red-500 ml-2">🗑</button>
         </div>
