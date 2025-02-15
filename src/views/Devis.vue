@@ -27,7 +27,7 @@ const sections = ref([]);
 // Ajouter un titre (section)
 const ajouterTitre = () => {
   sections.value.push({
-    titre: `Nouveau Titre`,
+    titre: ``,
     lignes: [{ label: "", quantite: null, pu: null }],
   });
 };
@@ -68,7 +68,7 @@ const genererPDF = async () => {
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // Infos de l'artisan (en haut à gauche)
-  page.drawText(`${artisan.nom}`, { x: 50, y, size: 14 });
+  page.drawText(`${artisan.nom}`, { x: 50, y, size: 16 });
   page.drawText(`${artisan.adresse}`, { x: 50, y: y - 20, size: 12 });
   page.drawText(`${artisan.code_postal}`, { x: 50, y: y - 40, size: 12 });
   page.drawText(`Tél: ${artisan.telephone}`, { x: 50, y: y - 60, size: 12 });
@@ -90,7 +90,7 @@ const genererPDF = async () => {
 
 
     // En-tête du tableau avec fond gris clair
-    const headers = ["Description", "Qté", "P.U", "Total"];
+    const headers = ["Désignation", "Qté", "P.U", "Total"];
     const positions = [50, 250, 350, 450];
 
     // Dessin du fond gris clair derrière les en-têtes
@@ -117,8 +117,6 @@ const genererPDF = async () => {
 
       y -= 20;
 
-      // Ligne séparatrice grise
-      page.drawLine({ start: { x: 50, y }, end: { x: 550, y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
     });
 
     y -= 10;
@@ -162,7 +160,7 @@ const genererPDF = async () => {
     <!-- Numéro de devis -->
     <div class="input-div">
       <label class="block font-semibold">Numéro de Devis :</label>
-      <input v-model="numeroDevis" type="text" class="w-full border p-2 rounded" placeholder="Ex: FAC-001" />
+      <input v-model="numeroDevis" type="text" class="w-full border p-2 rounded" placeholder="Ex: 0001" />
     </div>
 
     <!-- Infos du client -->
@@ -187,21 +185,21 @@ const genererPDF = async () => {
     </div>
 
     <!-- Titres et lignes -->
-    <h3 class="text-lg font-semibold mb-4">Détails de la Devis</h3>
+    <h3 class="text-lg font-semibold mb-4">Détails du Devis</h3>
 
     <button @click="ajouterTitre" class="bg-blue-500 text-white px-4 py-2 rounded mb-4">+ Ajouter un titre</button>
 
     <div v-for="(section, sectionIndex) in sections" :key="sectionIndex" class="border-title p-4 rounded-lg mb-6">
       <!-- Titre avec icône suppression -->
       <div class="flex justify-between items-center mb-2">
-        <input v-model="section.titre" type="text" class="w-full border p-2 rounded font-bold text-lg" />
+        <input v-model="section.titre" type="text" class="w-full border p-2 rounded font-bold text-lg" placeholder="Titre"/>
         <button @click="supprimerTitre(sectionIndex)" class="ml-6 text-red-500">🗑</button>
       </div>
 
       <!-- Tableau -->
       <div class="border rounded-lg overflow-hidden">
         <div v-for="(ligne, ligneIndex) in section.lignes" :key="ligneIndex" class="flex border-t p-2 items-center">
-          <input v-model="ligne.label" type="text" class="w-1/2 border p-2 rounded" placeholder="Label"/>
+          <input v-model="ligne.label" type="text" class="w-1/2 border p-2 rounded" placeholder="Désignation"/>
           <input v-model.number="ligne.quantite" type="number" min="1" class="w-1/6 border p-2 rounded text-center" placeholder="Quantité" />
           <input v-model.number="ligne.pu" type="number" min="0" step="0.01" class="w-1/6 border p-2 rounded text-center"  placeholder="PU"/>
           <span class="w-1/6 text-center" >{{ totalLigne(ligne).toFixed(2) }} €</span>
