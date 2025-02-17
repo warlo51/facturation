@@ -1,9 +1,8 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { saveAs } from "file-saver";
 
-// Infos de l'artisan (fixes dans le code)
+// Infos de l'artisan
 const artisan = {
   nom: "Christian Mansuy",
   adresse: "24 rue Alphonse de Lamartine",
@@ -13,18 +12,17 @@ const artisan = {
   siren: "539 857 797",
 };
 
-// Champs de formulaire pour le client
+// Champs du formulaire
+const pdfBlob = ref(null);
 const nomClient = ref("");
 const adresseClient = ref("");
 const cpClient = ref("");
 const dateDevis = ref("");
-const numeroDevis = ref("");  // Ajout du numéro de Devis
-
-
-// Liste des sections (titres) avec leurs lignes associées
+const numeroDevis = ref("");
 const sections = ref([]);
+const pdfUrl = ref("");
 
-// Ajouter un titre (section)
+// Ajouter une section (titre)
 const ajouterTitre = () => {
   sections.value.push({
     titre: ``,
@@ -32,7 +30,7 @@ const ajouterTitre = () => {
   });
 };
 
-// Ajouter une ligne dans une section spécifique
+// Ajouter une ligne
 const ajouterLigne = (section) => {
   section.lignes.push({ label: "", quantite: null, pu: null });
 };
@@ -44,8 +42,9 @@ const supprimerLigne = (section, index) => {
   }
 };
 
+// Supprimer une section
 const supprimerTitre = (sectionIndex) => {
-  sections.value.splice(sectionIndex, 1); // Supprime la section à l'index donné
+  sections.value.splice(sectionIndex, 1);
 };
 
 // Calcul des totaux
@@ -59,7 +58,7 @@ const totalDevis = computed(() =>
     )
 );
 
-// Génération du PDF
+// Génération et affichage du PDF
 const genererPDF = async () => {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([600, 800]);
@@ -67,7 +66,7 @@ const genererPDF = async () => {
 
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Infos de l'artisan (en haut à gauche)
+  // Infos de l'artisan
   page.drawText(`${artisan.nom}`, { x: 50, y, size: 16 });
   page.drawText(`${artisan.adresse}`, { x: 50, y: y - 20, size: 12 });
   page.drawText(`${artisan.code_postal}`, { x: 50, y: y - 40, size: 12 });
@@ -84,22 +83,18 @@ const genererPDF = async () => {
   y -= 160;
 
   sections.value.forEach((section) => {
-    // Affichage du titre
     page.drawText(section.titre, { x: 50, y, size: 14, color: rgb(0, 0, 0) });
     y -= 40;
 
-
-    // En-tête du tableau avec fond gris clair
     const headers = ["Désignation", "Qté", "P.U", "Total"];
     const positions = [50, 250, 350, 450];
 
-    // Dessin du fond gris clair derrière les en-têtes
     page.drawRectangle({
       x: 50,
       y: y - 5,
       width: 500,
       height: 20,
-      color: rgb(0.9, 0.9, 0.9), // Gris clair
+      color: rgb(0.9, 0.9, 0.9),
     });
 
     headers.forEach((text, index) => {
@@ -110,108 +105,85 @@ const genererPDF = async () => {
 
     section.lignes.forEach((ligne) => {
       const values = [ligne.label, ligne.quantite, ligne.pu.toFixed(2) + " €", totalLigne(ligne).toFixed(2) + " €"];
-
       values.forEach((text, index) => {
         page.drawText(text.toString(), { x: positions[index], y, size: 12 });
       });
-
       y -= 20;
-
     });
 
     y -= 10;
   });
 
-  // Total général
   y -= 20;
   page.drawText(`Total : ${totalDevis.value.toFixed(2)} €`, { x: 450, y, size: 14, color: rgb(0, 0, 0) });
-  y -= 40;
-  page.drawText(`Le montant peut etre révisé en fonction du temps réel passé sur le chantier`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
 
-  y -= 20;
-  page.drawText(`et de l'ajustement des fournitures et/ou des prix`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
-
-  y -= 20;
-  page.drawText(`TVA non applicable, article 293 B du Code Général des impôts`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
-
-  y -= 40;
-  page.drawText(`Le client`, { x: 50, y, size: 12, font: fontBold,color: rgb(0, 0, 0) });
-  page.drawText('Christian MANSUY', { x: 350, y, size: 12, font: fontBold,color: rgb(0, 0, 0) });
-  y -= 20;
-  page.drawText(`Mention manuscrite et datée:`, { x: 50, y, size: 10, color: rgb(0, 0, 0) });
-  y -= 20;
-  page.drawText(`"Devis reçu avant l'exécution des travaux."`, { x: 50, y, size: 9, color: rgb(0, 0, 0) });
-  y -= 20;
-  page.drawText(`Bon pour travaux. "`, { x: 50, y, size: 9, color: rgb(0, 0, 0) });
-
-
-  // Sauvegarde du PDF
   const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
-  saveAs(blob, "devis.pdf");
+  pdfUrl.value = URL.createObjectURL(blob);
+  pdfBlob.value = new Blob([pdfBytes], { type: "application/pdf" });
 };
+
+const telechargerPDF = () => {
+  if (pdfBlob.value) {
+    saveAs(pdfBlob.value, "devis.pdf");
+  }
+};
+
+// Mise à jour automatique du PDF à chaque modification
+watch([nomClient, adresseClient, cpClient, dateDevis, numeroDevis, sections], genererPDF, { deep: true });
 
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg mt-10">
-    <h2 class="text-2xl font-bold mb-6 text-center">Créer un Devis</h2>
-
-    <!-- Numéro de devis -->
+  <div class="principal-div">
     <div class="input-div">
-      <label class="block font-semibold">Numéro de Devis :</label>
-      <input v-model="numeroDevis" type="text" class="w-full border p-2 rounded" placeholder="Ex: 0001" />
-    </div>
+      <h2 class="text-2xl font-bold mb-6 text-center">Créer un Devis</h2>
 
-    <!-- Infos du client -->
-    <div class="grid grid-cols-2 gap-4 mb-6">
       <div class="input-div">
-        <label class="block font-semibold">Date :</label>
-        <input v-model="dateDevis" type="date" class="w-full border p-2 rounded" />
-      </div>
-      <div class="input-div">
-        <label class="block font-semibold">Nom du Client :</label>
-        <input v-model="nomClient" type="text" class="w-full border p-2 rounded" />
-      </div>
-    </div>
-
-    <div class="input-div">
-      <label class="block font-semibold">Adresse du Client :</label>
-      <input v-model="adresseClient" class="w-full border p-2 rounded"></input>
-    </div>
-    <div class="input-div">
-      <label class="block font-semibold">CP du Client :</label>
-      <input v-model="cpClient" class="w-full border p-2 rounded"></input>
-    </div>
-
-    <!-- Titres et lignes -->
-    <h3 class="text-lg font-semibold mb-4">Détails du Devis</h3>
-
-    <button @click="ajouterTitre" class="bg-blue-500 text-white px-4 py-2 rounded mb-4">+ Ajouter un titre</button>
-
-    <div v-for="(section, sectionIndex) in sections" :key="sectionIndex" class="border-title p-4 rounded-lg mb-6">
-      <!-- Titre avec icône suppression -->
-      <div class="flex justify-between items-center mb-2">
-        <input v-model="section.titre" type="text" class="w-full border p-2 rounded font-bold text-lg" placeholder="Titre"/>
-        <button @click="supprimerTitre(sectionIndex)" class="ml-6 text-red-500">🗑</button>
+        <label class="block font-semibold">Numéro de Devis :</label>
+        <input v-model="numeroDevis" type="text" class="w-full border p-2 rounded" placeholder="Ex: 0001" />
       </div>
 
-      <!-- Tableau -->
-      <div class="border rounded-lg overflow-hidden">
-        <div v-for="(ligne, ligneIndex) in section.lignes" :key="ligneIndex" class="flex border-t p-2 items-center">
-          <input v-model="ligne.label" type="text" class="w-1/2 border p-2 rounded" placeholder="Désignation"/>
-          <input v-model.number="ligne.quantite" type="number" min="1" class="w-1/6 border p-2 rounded text-center" placeholder="Quantité" />
-          <input v-model.number="ligne.pu" type="number" min="0" step="0.01" class="w-1/6 border p-2 rounded text-center"  placeholder="PU"/>
-          <span class="w-1/6 text-center" >{{ totalLigne(ligne).toFixed(2) }} €</span>
-          <button @click="supprimerLigne(section, ligneIndex)" class="text-red-500 ml-2">🗑</button>
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="input-div">
+          <label class="block font-semibold">Date :</label>
+          <input v-model="dateDevis" type="date" class="w-full border p-2 rounded" />
+        </div>
+        <div class="input-div">
+          <label class="block font-semibold">Nom du Client :</label>
+          <input v-model="nomClient" type="text" class="w-full border p-2 rounded" />
         </div>
       </div>
 
-      <!-- Bouton Ajouter une ligne -->
-      <button @click="ajouterLigne(section)" class="bg-gray-500 text-white px-4 py-2 rounded mt-2">+ Ajouter une ligne</button>
+      <div class="input-div">
+        <label class="block font-semibold">Adresse du Client :</label>
+        <input v-model="adresseClient" class="w-full border p-2 rounded"></input>
+      </div>
+      <div class="input-div">
+        <label class="block font-semibold">CP du Client :</label>
+        <input v-model="cpClient" class="w-full border p-2 rounded"></input>
+      </div>
+
+      <h3 class="text-lg font-semibold mb-4">Détails du Devis</h3>
+
+      <button @click="ajouterTitre" class="bg-blue-500 text-white px-4 py-2 rounded mb-4">+ Ajouter un titre</button>
+
+      <div v-for="(section, sectionIndex) in sections" :key="sectionIndex" class="border-title p-4 rounded-lg mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <input v-model="section.titre" type="text" class="w-full border p-2 rounded font-bold text-lg" placeholder="Titre"/>
+          <button @click="supprimerTitre(sectionIndex)" class="ml-6 text-red-500">🗑</button>
+        </div>
+
+        <div v-for="(ligne, ligneIndex) in section.lignes" :key="ligneIndex" class="flex border-t p-2 items-center">
+          <input v-model="ligne.label" type="text" class="w-1/2 border p-2 rounded" placeholder="Désignation"/>
+          <input v-model.number="ligne.quantite" type="number" class="w-1/6 border p-2 rounded text-center" placeholder="Quantité" />
+          <input v-model.number="ligne.pu" type="number" class="w-1/6 border p-2 rounded text-center" placeholder="PU"/>
+          <button @click="supprimerLigne(section, ligneIndex)" class="text-red-500 ml-2">🗑</button>
+        </div>
+      </div>
+      <button @click="telechargerPDF" class="bg-green-500 text-white px-6 py-2 rounded mt-4 w-full">Télécharger le Devis</button>
     </div>
 
-    <!-- Bouton Générer le Devis -->
-    <button @click="genererPDF" class="bg-green-500 text-white px-6 py-2 rounded mt-4 w-full">Générer le Devis</button>
+    <iframe v-if="pdfUrl" :src="pdfUrl" class="preview-div"></iframe>
   </div>
 </template>
