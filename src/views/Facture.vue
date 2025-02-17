@@ -6,7 +6,7 @@ import { saveAs } from "file-saver";
 const artisan = {
   nom: "Christian Mansuy",
   adresse: "24 rue Alphonse de Lamartine",
-  code_postal: " 51100 Reims",
+  code_postal: "51100 Reims",
   telephone: "06-31-74-36-45",
   email: "cmansuy51@gmail.com",
   siren: "539 857 797",
@@ -57,19 +57,49 @@ const genererPDF = async () => {
   const page = pdfDoc.addPage([600, 800]);
   let y = 750;
 
-  page.drawText(`${artisan.nom}`, {x: 50, y, size: 16});
-  page.drawText(`${artisan.adresse}`, {x: 50, y: y - 20, size: 12});
-  page.drawText(`Facture N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`, {x: 350, y, size: 16});
-  page.drawText(`Client : ${nomClient.value}`, {x: 350, y: y - 40, size: 12});
+  page.drawText(`${artisan.nom}`, { x: 50, y, size: 16 });
+  page.drawText(`${artisan.adresse}`, { x: 50, y: y - 20, size: 12 });
+  page.drawText(`${artisan.code_postal}`, { x: 50, y: y - 40, size: 12 });
+  page.drawText(`Tél: ${artisan.telephone}`, { x: 50, y: y - 60, size: 12 });
+  page.drawText(`Email: ${artisan.email}`, { x: 50, y: y - 80, size: 12 });
+  page.drawText(`SIREN: ${artisan.siren}`, { x: 50, y: y - 100, size: 12 });
+
+  page.drawText(`Fact N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`, { x: 350, y, size: 16 });
+  page.drawText(`Date : ${dateFacture.value}`, { x: 350, y: y - 20, size: 12 });
+  page.drawText(`Client : ${nomClient.value}`, { x: 350, y: y - 40, size: 12 });
+  page.drawText(`Adresse: ${adresseClient.value}`, { x: 350, y: y - 60, size: 12 });
+  page.drawText(`CP: ${cpClient.value}`, { x: 350, y: y - 80, size: 12 });
 
   y -= 160;
   sections.value.forEach((section) => {
     page.drawText(section.titre, {x: 50, y, size: 14, color: rgb(0, 0, 0)});
     y -= 40;
+
+    const headers = ["Désignation", "Qté", "P.U", "Total"];
+    const positions = [50, 250, 350, 450];
+
+    page.drawRectangle({
+      x: 50,
+      y: y - 5,
+      width: 500,
+      height: 20,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+
+    headers.forEach((text, index) => {
+      page.drawText(text, { x: positions[index], y, size: 12, color: rgb(0, 0, 0) });
+    });
+
+    y -= 20;
+
     section.lignes.forEach((ligne) => {
-      page.drawText(ligne.label, {x: 50, y, size: 12});
+      const values = [ligne.label, ligne.quantite, ligne.pu.toFixed(2) + " €", totalLigne(ligne).toFixed(2) + " €"];
+      values.forEach((text, index) => {
+        page.drawText(text.toString(), { x: positions[index], y, size: 12 });
+      });
       y -= 20;
     });
+
     y -= 10;
   });
 
@@ -83,7 +113,7 @@ const genererPDF = async () => {
 
 const telechargerPDF = () => {
   if (pdfBlob.value) {
-    saveAs(pdfBlob.value, "devis.pdf");
+    saveAs(pdfBlob.value, `Fact N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`);
   }
 };
 

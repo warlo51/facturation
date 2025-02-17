@@ -6,7 +6,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 const artisan = {
   nom: "Christian Mansuy",
   adresse: "24 rue Alphonse de Lamartine",
-  code_postal: " 51100 Reims",
+  code_postal: "51100 Reims",
   telephone: "06-31-74-36-45",
   email: "cmansuy51@gmail.com",
   siren: "539 857 797",
@@ -125,7 +125,7 @@ const genererPDF = async () => {
 
 const telechargerPDF = () => {
   if (pdfBlob.value) {
-    saveAs(pdfBlob.value, "devis.pdf");
+    saveAs(pdfBlob.value, `Devis N° DEV-${new Date().getFullYear()}-${numeroDevis.value}`);
   }
 };
 
