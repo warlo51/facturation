@@ -86,8 +86,8 @@ const genererPDF = async () => {
     page.drawText(section.titre, { x: 50, y, size: 14, color: rgb(0, 0, 0) });
     y -= 40;
 
-    const headers = ["Désignation", "Qté", "P.U", "Total"];
-    const positions = [50, 250, 350, 450];
+    const headers = ["Désignation", "Qté", "P.U"];
+    const positions = [50, 250, 350];
 
     page.drawRectangle({
       x: 50,
@@ -104,7 +104,7 @@ const genererPDF = async () => {
     y -= 20;
 
     section.lignes.forEach((ligne) => {
-      const values = [ligne.label, ligne.quantite, ligne.pu.toFixed(2) + " €", totalLigne(ligne).toFixed(2) + " €"];
+      const values = [ligne.label, ligne.quantite, ligne.pu.toFixed(2) + " €"];
       values.forEach((text, index) => {
         page.drawText(text.toString(), { x: positions[index], y, size: 12 });
       });
@@ -116,8 +116,23 @@ const genererPDF = async () => {
 
   y -= 20;
   page.drawText(`Total : ${totalDevis.value.toFixed(2)} €`, { x: 450, y, size: 14, color: rgb(0, 0, 0) });
+  y -= 40;
+  page.drawText(`Le montant peut etre révisé en fonction du temps réel passé sur le chantier`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
+  y -= 20;
+  page.drawText(`et de l'ajustement des fournitures et/ou des prix`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
+  y -= 20;
+  page.drawText(`TVA non applicable, article 293 B du Code Général des impôts`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
+  y -= 40;
+  page.drawText(`Le client`, { x: 50, y, size: 12, font: fontBold,color: rgb(0, 0, 0) });
+  page.drawText('Christian MANSUY', { x: 350, y, size: 12, font: fontBold,color: rgb(0, 0, 0) });
+  y -= 20;
+  page.drawText(`Mention manuscrite et datée:`, { x: 50, y, size: 10, color: rgb(0, 0, 0) });
+  y -= 20;
+  page.drawText(`"Devis reçu avant l'exécution des travaux."`, { x: 50, y, size: 9, color: rgb(0, 0, 0) });
+  y -= 20;
+  page.drawText(`Bon pour travaux. "`, { x: 50, y, size: 9, color: rgb(0, 0, 0) });
 
-  const pdfBytes = await pdfDoc.save();
+ const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
   pdfUrl.value = URL.createObjectURL(blob);
   pdfBlob.value = new Blob([pdfBytes], { type: "application/pdf" });
