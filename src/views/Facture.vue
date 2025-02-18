@@ -13,7 +13,7 @@ const fetchProfessionnels = async () => {
   user.value = professionnels.filter((pro) => pro.email === 'cmansuy51@gmail.com')
 
   artisan.value = {
-    status: user.value[0]?.status,
+    status: user.value[0]?.statut,
     nom: user.value[0]?.name,
     adresse: user.value[0]?.adresse,
     code_postal: user.value[0]?.cp,
@@ -72,12 +72,13 @@ const genererPDF = async () => {
   const page = pdfDoc.addPage([600, 800]);
   let y = 750;
 
-  page.drawText(`${artisan.value?.nom}`, { x: 50, y, size: 16 });
-  page.drawText(`${artisan.value?.adresse}`, { x: 50, y: y - 20, size: 12 });
-  page.drawText(`${artisan.value?.code_postal}`, { x: 50, y: y - 40, size: 12 });
-  page.drawText(`Tél: ${artisan.value?.telephone}`, { x: 50, y: y - 60, size: 12 });
-  page.drawText(`Email: ${artisan.value?.email}`, { x: 50, y: y - 80, size: 12 });
-  page.drawText(`SIREN: ${artisan.value?.siren}`, { x: 50, y: y - 100, size: 12 });
+  page.drawText(`${artisan.value?.status}`, { x: 50, y, size: 16 });
+  page.drawText(`${artisan.value?.nom}`, { x: 50, y: y - 20, size: 16 });
+  page.drawText(`${artisan.value?.adresse}`, { x: 50, y: y - 40, size: 12 });
+  page.drawText(`${artisan.value?.code_postal}`, { x: 50, y: y - 60, size: 12 });
+  page.drawText(`Tél: ${artisan.value?.telephone}`, { x: 50, y: y - 80, size: 12 });
+  page.drawText(`Email: ${artisan.value?.email}`, { x: 50, y: y - 100, size: 12 });
+  page.drawText(`SIREN: ${artisan.value?.siren}`, { x: 50, y: y - 120, size: 12 });
 
   page.drawText(`Fact N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`, { x: 350, y, size: 16 });
   page.drawText(`Date : ${dateFacture.value}`, { x: 350, y: y - 20, size: 12 });

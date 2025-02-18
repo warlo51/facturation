@@ -11,7 +11,7 @@ const fetchProfessionnels = async () => {
   const professionnels = await client.fetch(query);
   user.value = professionnels.filter((pro) => pro.email === 'cmansuy51@gmail.com')
   artisan.value = {
-    status: user.value[0]?.status,
+    status: user.value[0]?.statut,
     nom: user.value[0]?.name,
     adresse: user.value[0]?.adresse,
     code_postal: user.value[0]?.cp,
@@ -80,12 +80,13 @@ const genererPDF = async () => {
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // Infos de l'artisan
-  page.drawText(`${artisan.value?.nom}`, { x: 50, y, size: 16 });
-  page.drawText(`${artisan.value?.adresse}`, { x: 50, y: y - 20, size: 12 });
-  page.drawText(`${artisan.value?.code_postal}`, { x: 50, y: y - 40, size: 12 });
-  page.drawText(`Tél: ${artisan.value?.telephone}`, { x: 50, y: y - 60, size: 12 });
-  page.drawText(`Email: ${artisan.value?.email}`, { x: 50, y: y - 80, size: 12 });
-  page.drawText(`SIREN: ${artisan.value?.siren}`, { x: 50, y: y - 100, size: 12 });
+  page.drawText(`${artisan.value?.status}`, { x: 50, y, size: 16 });
+  page.drawText(`${artisan.value?.nom}`, { x: 50, y: y - 20, size: 16 });
+  page.drawText(`${artisan.value?.adresse}`, { x: 50, y: y - 40, size: 12 });
+  page.drawText(`${artisan.value?.code_postal}`, { x: 50, y: y - 60, size: 12 });
+  page.drawText(`Tél: ${artisan.value?.telephone}`, { x: 50, y: y - 80, size: 12 });
+  page.drawText(`Email: ${artisan.value?.email}`, { x: 50, y: y - 100, size: 12 });
+  page.drawText(`SIREN: ${artisan.value?.siren}`, { x: 50, y: y - 120, size: 12 });
 
   page.drawText(`Devis N° DEV-${new Date().getFullYear()}-${numeroDevis.value}`, { x: 350, y, size: 16 });
   page.drawText(`Date : ${dateDevis.value}`, { x: 350, y: y - 20, size: 12 });
@@ -140,7 +141,7 @@ const genererPDF = async () => {
   page.drawText(`TVA non applicable, article 293 B du Code Général des impôts`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
   y -= 40;
   page.drawText(`Le client`, { x: 50, y, size: 12, font: fontBold,color: rgb(0, 0, 0) });
-  page.drawText('Christian MANSUY', { x: 350, y, size: 12, font: fontBold,color: rgb(0, 0, 0) });
+  page.drawText(`${artisan.value?.nom}`, { x: 350, y, size: 12, font: fontBold,color: rgb(0, 0, 0) });
   y -= 20;
   page.drawText(`Mention manuscrite et datée:`, { x: 50, y, size: 10, color: rgb(0, 0, 0) });
   y -= 20;
