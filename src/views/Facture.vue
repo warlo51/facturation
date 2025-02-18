@@ -1,16 +1,31 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import {ref, computed, watch, onMounted} from "vue";
 import { PDFDocument, rgb } from "pdf-lib";
 import { saveAs } from "file-saver";
+import {client} from "../../sanity.js";
 
-const artisan = {
-  nom: "Christian Mansuy",
-  adresse: "24 rue Alphonse de Lamartine",
-  code_postal: "51100 Reims",
-  telephone: "06-31-74-36-45",
-  email: "cmansuy51@gmail.com",
-  siren: "539 857 797",
+const user = ref([]);
+const artisan = ref({});
+
+const fetchProfessionnels = async () => {
+  const query = `*[_type == "professionnel"]`;
+  const professionnels = await client.fetch(query);
+  user.value = professionnels.filter((pro) => pro.email === 'cmansuy51@gmail.com')
+
+  artisan.value = {
+    status: user.value[0]?.status,
+    nom: user.value[0]?.name,
+    adresse: user.value[0]?.adresse,
+    code_postal: user.value[0]?.cp,
+    telephone: user.value[0]?.phone,
+    email: user.value[0]?.email,
+    siren: user.value[0]?.siren,
+  };
 };
+
+onMounted(async () => {
+  await fetchProfessionnels()
+})
 
 const pdfBlob = ref(null);
 const nomClient = ref("");
@@ -57,12 +72,12 @@ const genererPDF = async () => {
   const page = pdfDoc.addPage([600, 800]);
   let y = 750;
 
-  page.drawText(`${artisan.nom}`, { x: 50, y, size: 16 });
-  page.drawText(`${artisan.adresse}`, { x: 50, y: y - 20, size: 12 });
-  page.drawText(`${artisan.code_postal}`, { x: 50, y: y - 40, size: 12 });
-  page.drawText(`Tél: ${artisan.telephone}`, { x: 50, y: y - 60, size: 12 });
-  page.drawText(`Email: ${artisan.email}`, { x: 50, y: y - 80, size: 12 });
-  page.drawText(`SIREN: ${artisan.siren}`, { x: 50, y: y - 100, size: 12 });
+  page.drawText(`${artisan.value?.nom}`, { x: 50, y, size: 16 });
+  page.drawText(`${artisan.value?.adresse}`, { x: 50, y: y - 20, size: 12 });
+  page.drawText(`${artisan.value?.code_postal}`, { x: 50, y: y - 40, size: 12 });
+  page.drawText(`Tél: ${artisan.value?.telephone}`, { x: 50, y: y - 60, size: 12 });
+  page.drawText(`Email: ${artisan.value?.email}`, { x: 50, y: y - 80, size: 12 });
+  page.drawText(`SIREN: ${artisan.value?.siren}`, { x: 50, y: y - 100, size: 12 });
 
   page.drawText(`Fact N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`, { x: 350, y, size: 16 });
   page.drawText(`Date : ${dateFacture.value}`, { x: 350, y: y - 20, size: 12 });
@@ -75,8 +90,8 @@ const genererPDF = async () => {
     page.drawText(section.titre, {x: 50, y, size: 14, color: rgb(0, 0, 0)});
     y -= 40;
 
-    const headers = ["Désignation", "Qté", "P.U"];
-    const positions = [50, 250, 350];
+    const headers = ["Désignation", "Qté", "P.U", "Total"];
+    const positions = [50, 250, 350, 450];
 
     page.drawRectangle({
       x: 50,
@@ -93,7 +108,10 @@ const genererPDF = async () => {
     y -= 20;
 
     section.lignes.forEach((ligne) => {
-      const values = [ligne.label, ligne.quantite, ligne.pu.toFixed(2) + " €"];
+      const quantite = ligne.quantite === 0 || ligne.quantite === null ? '' : ligne.quantite;
+      const pu = ligne.quantite === 0 || ligne.quantite === null ? '' : ligne.pu.toFixed(2) + " €";
+      const total = ligne.quantite === 0 || ligne.quantite === null ? '' : totalLigne(ligne).toFixed(2) + " €";
+      const values = [ligne.label, quantite, pu, total];
       values.forEach((text, index) => {
         page.drawText(text.toString(), { x: positions[index], y, size: 12 });
       });
@@ -114,9 +132,34 @@ const genererPDF = async () => {
   pdfBlob.value = new Blob([pdfBytes], { type: "application/pdf" });
 };
 
-const telechargerPDF = () => {
+const telechargerPDF = async () => {
   if (pdfBlob.value) {
     saveAs(pdfBlob.value, `Fact N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`);
+
+    const fileAsset = await client.assets.upload("file", pdfBlob.value, {
+      filename: `Fact N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`,
+    });
+
+    // 2️⃣ Créer l'objet "facture" et l'enregistrer dans Sanity
+    const facture = {
+      _type: "facture",
+      title: `Fact N° FAC-${new Date().getFullYear()}-${numeroFacture.value}`,
+      date: dateFacture.value,
+      client: nomClient.value,
+      fichier: {
+        _type: "file",
+        asset: {
+          _ref: fileAsset._id,
+        },
+      },
+      professionnel: {
+        _type: "reference",
+        _ref: user.value[0]?._id,
+      },
+    };
+
+    const response = await client.create(facture);
+    alert("Facture sauvegarder dans ton espace avec succès !");
   }
 };
 
@@ -127,26 +170,26 @@ watch([nomClient, adresseClient, cpClient, dateFacture, numeroFacture, sections]
   <div class="principal-div">
     <div class="input-div">
       <h2 class="text-2xl font-bold mb-6 text-center">Créer une Facture</h2>
-      <div>
-        <label>Numéro de Facture :</label>
+      <div class="input-div">
+        <label>Numéro de Facture : </label>
         <input v-model="numeroFacture" type="text" class="border p-2 rounded w-full" placeholder="Ex: 0001"/>
       </div>
       <div class="grid grid-cols-2 gap-4 mb-6">
-        <div>
+        <div class="input-div">
           <label>Date :</label>
           <input v-model="dateFacture" type="date" class="border p-2 rounded w-full"/>
         </div>
-        <div>
-          <label>Nom du Client :</label>
+        <div class="input-div">
+          <label>Nom du Client : </label>
           <input v-model="nomClient" type="text" class="border p-2 rounded w-full"/>
         </div>
       </div>
-      <div>
-        <label>Adresse du Client :</label>
+      <div class="input-div">
+        <label>Adresse du Client : </label>
         <input v-model="adresseClient" class="border p-2 rounded w-full"/>
       </div>
-      <div>
-        <label>CP du Client :</label>
+      <div class="input-div">
+        <label>CP du Client : </label>
         <input v-model="cpClient" class="border p-2 rounded w-full"/>
       </div>
       <h3 class="text-lg font-semibold mb-4">Détails de la Facture</h3>

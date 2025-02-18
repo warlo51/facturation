@@ -1,16 +1,29 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import {ref, computed, watch, onBeforeMount, onMounted} from "vue";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import {client} from "../../sanity.js";
 
-// Infos de l'artisan
-const artisan = {
-  nom: "Christian Mansuy",
-  adresse: "24 rue Alphonse de Lamartine",
-  code_postal: "51100 Reims",
-  telephone: "06-31-74-36-45",
-  email: "cmansuy51@gmail.com",
-  siren: "539 857 797",
+const user = ref([]);
+const artisan = ref({});
+
+const fetchProfessionnels = async () => {
+  const query = `*[_type == "professionnel"]`;
+  const professionnels = await client.fetch(query);
+  user.value = professionnels.filter((pro) => pro.email === 'cmansuy51@gmail.com')
+  artisan.value = {
+    status: user.value[0]?.status,
+    nom: user.value[0]?.name,
+    adresse: user.value[0]?.adresse,
+    code_postal: user.value[0]?.cp,
+    telephone: user.value[0]?.phone,
+    email: user.value[0]?.email,
+    siren: user.value[0]?.siren,
+  };
 };
+
+onMounted(async () => {
+  await fetchProfessionnels()
+})
 
 // Champs du formulaire
 const pdfBlob = ref(null);
@@ -67,12 +80,12 @@ const genererPDF = async () => {
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // Infos de l'artisan
-  page.drawText(`${artisan.nom}`, { x: 50, y, size: 16 });
-  page.drawText(`${artisan.adresse}`, { x: 50, y: y - 20, size: 12 });
-  page.drawText(`${artisan.code_postal}`, { x: 50, y: y - 40, size: 12 });
-  page.drawText(`Tél: ${artisan.telephone}`, { x: 50, y: y - 60, size: 12 });
-  page.drawText(`Email: ${artisan.email}`, { x: 50, y: y - 80, size: 12 });
-  page.drawText(`SIREN: ${artisan.siren}`, { x: 50, y: y - 100, size: 12 });
+  page.drawText(`${artisan.value?.nom}`, { x: 50, y, size: 16 });
+  page.drawText(`${artisan.value?.adresse}`, { x: 50, y: y - 20, size: 12 });
+  page.drawText(`${artisan.value?.code_postal}`, { x: 50, y: y - 40, size: 12 });
+  page.drawText(`Tél: ${artisan.value?.telephone}`, { x: 50, y: y - 60, size: 12 });
+  page.drawText(`Email: ${artisan.value?.email}`, { x: 50, y: y - 80, size: 12 });
+  page.drawText(`SIREN: ${artisan.value?.siren}`, { x: 50, y: y - 100, size: 12 });
 
   page.drawText(`Devis N° DEV-${new Date().getFullYear()}-${numeroDevis.value}`, { x: 350, y, size: 16 });
   page.drawText(`Date : ${dateDevis.value}`, { x: 350, y: y - 20, size: 12 });
@@ -86,8 +99,8 @@ const genererPDF = async () => {
     page.drawText(section.titre, { x: 50, y, size: 14, color: rgb(0, 0, 0) });
     y -= 40;
 
-    const headers = ["Désignation", "Qté", "P.U"];
-    const positions = [50, 250, 350];
+    const headers = ["Désignation", "Qté", "P.U", "Total"];
+    const positions = [50, 250, 350, 450];
 
     page.drawRectangle({
       x: 50,
@@ -104,7 +117,10 @@ const genererPDF = async () => {
     y -= 20;
 
     section.lignes.forEach((ligne) => {
-      const values = [ligne.label, ligne.quantite, ligne.pu.toFixed(2) + " €"];
+      const quantite = ligne.quantite === 0 || ligne.quantite === null ? '' : ligne.quantite;
+      const pu = ligne.quantite === 0 || ligne.quantite === null ? '' : ligne.pu.toFixed(2) + " €";
+      const total = ligne.quantite === 0 || ligne.quantite === null ? '' : totalLigne(ligne).toFixed(2) + " €";
+      const values = [ligne.label, quantite, pu, total];
       values.forEach((text, index) => {
         page.drawText(text.toString(), { x: positions[index], y, size: 12 });
       });
@@ -138,9 +154,34 @@ const genererPDF = async () => {
   pdfBlob.value = new Blob([pdfBytes], { type: "application/pdf" });
 };
 
-const telechargerPDF = () => {
+const telechargerPDF = async () => {
   if (pdfBlob.value) {
     saveAs(pdfBlob.value, `Devis N° DEV-${new Date().getFullYear()}-${numeroDevis.value}`);
+
+    const fileAsset = await client.assets.upload("file", pdfBlob.value, {
+      filename: `Devis N° DEV-${new Date().getFullYear()}-${numeroDevis.value}`,
+    });
+
+    // 2️⃣ Créer l'objet "facture" et l'enregistrer dans Sanity
+    const devis = {
+      _type: "devis",
+      title: `Devis N° DEV-${new Date().getFullYear()}-${numeroDevis.value}`,
+      date: dateDevis.value,
+      client: nomClient.value,
+      fichier: {
+        _type: "file",
+        asset: {
+          _ref: fileAsset._id,
+        },
+      },
+      professionnel: {
+        _type: "reference",
+        _ref: user.value[0]?._id,
+      },
+    };
+
+    await client.create(devis);
+    alert("Devis sauvegarder dans ton espace avec succès !");
   }
 };
 
@@ -155,27 +196,27 @@ watch([nomClient, adresseClient, cpClient, dateDevis, numeroDevis, sections], ge
       <h2 class="text-2xl font-bold mb-6 text-center">Créer un Devis</h2>
 
       <div class="input-div">
-        <label class="block font-semibold">Numéro de Devis :</label>
+        <label class="block font-semibold">Numéro de Devis : </label>
         <input v-model="numeroDevis" type="text" class="w-full border p-2 rounded" placeholder="Ex: 0001" />
       </div>
 
       <div class="grid grid-cols-2 gap-4 mb-6">
         <div class="input-div">
-          <label class="block font-semibold">Date :</label>
+          <label class="block font-semibold">Date : </label>
           <input v-model="dateDevis" type="date" class="w-full border p-2 rounded" />
         </div>
         <div class="input-div">
-          <label class="block font-semibold">Nom du Client :</label>
+          <label class="block font-semibold">Nom du Client : </label>
           <input v-model="nomClient" type="text" class="w-full border p-2 rounded" />
         </div>
       </div>
 
       <div class="input-div">
-        <label class="block font-semibold">Adresse du Client :</label>
+        <label class="block font-semibold">Adresse du Client : </label>
         <input v-model="adresseClient" class="w-full border p-2 rounded"></input>
       </div>
       <div class="input-div">
-        <label class="block font-semibold">CP du Client :</label>
+        <label class="block font-semibold">CP du Client : </label>
         <input v-model="cpClient" class="w-full border p-2 rounded"></input>
       </div>
 
@@ -195,6 +236,9 @@ watch([nomClient, adresseClient, cpClient, dateDevis, numeroDevis, sections], ge
           <input v-model.number="ligne.pu" type="number" class="w-1/6 border p-2 rounded text-center" placeholder="PU"/>
           <button @click="supprimerLigne(section, ligneIndex)" class="text-red-500 ml-2">🗑</button>
         </div>
+        <button @click="ajouterLigne(section)" class="bg-gray-500 text-white px-4 py-2 rounded mt-2">+ Ajouter une
+          ligne
+        </button>
       </div>
       <button @click="telechargerPDF" class="bg-green-500 text-white px-6 py-2 rounded mt-4 w-full">Télécharger le Devis</button>
     </div>
