@@ -7,6 +7,23 @@ import {client} from "../../sanity.js";
 const user = ref([]);
 const artisan = ref({});
 
+function splitStringAvoidWordCut(str, maxLength) {
+  let start = 0;
+  const result = [];
+  while (start < str.length) {
+    let end = start + maxLength;
+
+    // Si le mot est coupé, on ajuste la fin pour le découper à un espace
+    if (end < str.length && str[end] !== ' ' && str.lastIndexOf(' ', end) > start) {
+      end = str.lastIndexOf(' ', end); // Trouver la dernière espace avant 'end'
+    }
+
+    result.push(str.slice(start, end).trim());  // Ajouter le morceau sans espace inutile
+    start = end;  // Avancer le début pour le prochain morceau
+  }
+  return result
+}
+
 const fetchProfessionnels = async () => {
   const query = `*[_type == "professionnel"]`;
   const professionnels = await client.fetch(query);
@@ -92,7 +109,7 @@ const genererPDF = async () => {
     y -= 40;
 
     const headers = ["Désignation", "Qté", "P.U", "Total"];
-    const positions = [50, 250, 350, 450];
+    const positions = [50, 380, 420, 500];
 
     page.drawRectangle({
       x: 50,
@@ -113,10 +130,25 @@ const genererPDF = async () => {
       const pu = ligne.quantite === 0 || ligne.quantite === null ? '' : ligne.pu.toFixed(2) + " €";
       const total = ligne.quantite === 0 || ligne.quantite === null ? '' : totalLigne(ligne).toFixed(2) + " €";
       const values = [ligne.label, quantite, pu, total];
+
+      const maxWidth = 45;
+
+      const labelsLines = splitStringAvoidWordCut(ligne.label,maxWidth );
+
       values.forEach((text, index) => {
-        page.drawText(text.toString(), { x: positions[index], y, size: 12 });
+        if(labelsLines.length > 1 && index === 0) {
+          let yPosition = y;
+          const lineHeight = 20;
+
+          labelsLines.forEach((text, index2) => {
+            page.drawText(text.toString(), { x: positions[0], y: yPosition, size: 12 });
+            yPosition -= lineHeight;
+          });
+        }else{
+          page.drawText(text.toString(), { x: positions[index], y, size: 12 });
+        }
       });
-      y -= 20;
+      y -= labelsLines.length > 1 ? labelsLines.length * 25 : 20;
     });
 
     y -= 10;
@@ -132,6 +164,27 @@ const genererPDF = async () => {
   pdfUrl.value = URL.createObjectURL(blob);
   pdfBlob.value = new Blob([pdfBytes], { type: "application/pdf" });
 };
+
+function wrapText(text, maxWidth, font, fontSize) {
+  const words = text.split(' ');
+  let lines = [];
+  let currentLine = '';
+
+  words.forEach((word) => {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+    if (testWidth < maxWidth) {
+      currentLine = testLine;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  });
+
+  lines.push(currentLine);
+  return lines;
+}
 
 const telechargerPDF = async () => {
   if (pdfBlob.value) {
