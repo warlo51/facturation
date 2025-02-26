@@ -106,10 +106,11 @@ const genererPDF = async () => {
   page.drawText(`SIREN: ${artisan.value?.siren}`, { x: 50, y: y - 120, size: 12 });
 
   page.drawText(`Devis N° DEV-${new Date().getFullYear()}-${numeroDevis.value}`, { x: 350, y, size: 16 });
-  page.drawText(`Date : ${dateDevis.value}`, { x: 350, y: y - 20, size: 12 });
-  page.drawText(`Client : ${nomClient.value}`, { x: 350, y: y - 40, size: 12 });
-  page.drawText(`Adresse: ${adresseClient.value}`, { x: 350, y: y - 60, size: 12 });
-  page.drawText(`CP: ${cpClient.value}`, { x: 350, y: y - 80, size: 12 });
+  page.drawText(`Valable 3 mois`, { x: 350, y: y - 20, size: 12 });
+  page.drawText(`Date : ${dateDevis.value}`, { x: 350, y: y - 40, size: 12 });
+  page.drawText(`Client : ${nomClient.value}`, { x: 350, y: y - 60, size: 12 });
+  page.drawText(`Adresse: ${adresseClient.value}`, { x: 350, y: y - 80, size: 12 });
+  page.drawText(`CP: ${cpClient.value}`, { x: 350, y: y - 100, size: 12 });
 
   y -= 160;
 
@@ -140,7 +141,7 @@ const genererPDF = async () => {
       const total = ligne.quantite === 0 || ligne.quantite === null ? '' : totalLigne(ligne).toFixed(2) + " €";
       const values = [ligne.label, quantite, pu, total];
 
-      const maxWidth = 45;
+      const maxWidth = 38;
 
       const labelsLines = splitStringAvoidWordCut(ligne.label,maxWidth );
 
