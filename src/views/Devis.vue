@@ -165,7 +165,7 @@ const genererPDF = async () => {
   });
 
   y -= 20;
-  page.drawText(`Total : ${totalDevis.value.toFixed(2)} €`, { x: 450, y, size: 12, color: rgb(0, 0, 0) });
+  page.drawText(`Net à payer : ${totalDevis.value.toFixed(2)} €`, { x: 450, y, size: 12, color: rgb(0, 0, 0) });
   y -= 40;
   page.drawText(`Le montant peut etre révisé en fonction du temps réel passé sur le chantier`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
   y -= 20;

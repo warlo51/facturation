@@ -155,7 +155,7 @@ const genererPDF = async () => {
   });
 
   y -= 20;
-  page.drawText(`Total : ${totalFacture.value.toFixed(2)} €`, {x: 450, y, size: 12});
+  page.drawText(`Net à payer : ${totalFacture.value.toFixed(2)} €`, {x: 450, y, size: 12});
   y -= 40;
   page.drawText(`TVA non applicable, article 293 B du Code Général des impôts`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
 
