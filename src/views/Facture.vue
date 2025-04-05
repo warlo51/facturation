@@ -1,11 +1,85 @@
 <script setup>
 import {ref, computed, watch, onMounted} from "vue";
-import { PDFDocument, rgb } from "pdf-lib";
+import {PDFDocument, PDFName, rgb} from "pdf-lib";
 import { saveAs } from "file-saver";
 import {client} from "../../sanity.js";
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const user = ref([]);
 const artisan = ref({});
+
+const pdfBlob = ref(null);
+const nomClient = ref("");
+const adresseClient = ref("");
+const cpClient = ref("");
+const dateFacture = ref("");
+const numeroFacture = ref("");
+const sections = ref([]);
+const pdfUrl = ref("");
+
+onMounted(async () => {
+  const id = route.query.id
+  if (id) {
+    const query = `*[_type == "facture" && _id == "${id}"][0]{
+  _id,
+  title,
+  date,
+  client,
+  fichier{
+    asset->{
+      _id,
+      url
+    }
+  },
+  professionnel->{
+    _id,
+    title
+  }
+}`;
+    const params = {id}
+    const result = await client.fetch(query, params)
+    modifierFacture(result.fichier?.asset?.url)
+  }
+})
+
+const modifierFacture = async (url) => {
+  // Chargement du PDF existant
+  const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer());
+  const pdfDoc = await PDFDocument.load(existingPdfBytes, { updateMetadata: true });
+
+  const ref = pdfDoc.catalog.get(PDFName.of('FactureJSON'));
+  const factureJsonObj = pdfDoc.context.lookup(ref);
+
+  let docJson = factureJsonObj.value();
+  const decodedJson = docJson
+      .replace(/#7B/g, '{')  // Remplacer #7B par {
+      .replace(/#7D/g, '}')  // Remplacer #7D par }
+      .replace(/#5B/g, '[')  // Remplacer #5B par [
+      .replace(/#5D/g, ']')  // Remplacer #5D par ]
+      .replace(/#20/g, ' ')  // Remplacer #20 par espace
+      .replace(/#22/g, '"');
+
+  let cleanJson = decodedJson.replace('[FACTURE_JSON]', '');
+  cleanJson = cleanJson.substring(1);
+
+  const devisData = JSON.parse(cleanJson);
+
+  if (!devisData) {
+    console.error('Aucune donnée FactureJSON trouvée dans le catalogue du PDF.');
+    return;
+  }
+
+  numeroFacture.value = devisData.numero || '';
+  artisan.value = devisData.artisan || '';
+  dateFacture.value = devisData.date || '';
+
+  nomClient.value = devisData.client?.nom || '';
+  adresseClient.value = devisData.client?.adresse || '';
+  cpClient.value = devisData.client?.cp || '';
+
+  sections.value = devisData.sections || [];
+};
 
 function splitStringAvoidWordCut(str, maxLength) {
   let start = 0;
@@ -43,15 +117,6 @@ const fetchProfessionnels = async () => {
 onMounted(async () => {
   await fetchProfessionnels()
 })
-
-const pdfBlob = ref(null);
-const nomClient = ref("");
-const adresseClient = ref("");
-const cpClient = ref("");
-const dateFacture = ref("");
-const numeroFacture = ref("");
-const sections = ref([]);
-const pdfUrl = ref("");
 
 const ajouterTitre = () => {
   sections.value.push({
@@ -131,7 +196,7 @@ const genererPDF = async () => {
       const total = ligne.quantite === 0 || ligne.quantite === null ? '' : totalLigne(ligne).toFixed(2) + " €";
       const values = [ligne.label, quantite, pu, total];
 
-      const maxWidth = 45;
+      const maxWidth = 60;
 
       const labelsLines = splitStringAvoidWordCut(ligne.label,maxWidth );
 
@@ -159,6 +224,23 @@ const genererPDF = async () => {
   y -= 40;
   page.drawText(`TVA non applicable, article 293 B du Code Général des impôts`, { x: 50, y, size: 12, color: rgb(0, 0, 0) });
 
+  const factureData = {
+    numero: numeroFacture.value,
+    artisan: artisan.value,
+    date: dateFacture.value,
+    client: {
+      nom: nomClient.value,
+      adresse: adresseClient.value,
+      cp: cpClient.value
+    },
+    sections: sections.value
+  };
+
+  const jsonText = `[FACTURE_JSON]${JSON.stringify(factureData)}`;
+  const jsonValue = pdfDoc.context.obj(jsonText); // crée une chaîne PDF propre
+
+// Ici on met "DevisJSON" comme clé, et la chaîne JSON comme valeur
+  pdfDoc.catalog.set(PDFName.of('FactureJSON'), jsonValue);
   const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], {type: "application/pdf"});
   pdfUrl.value = URL.createObjectURL(blob);
@@ -212,8 +294,27 @@ const telechargerPDF = async () => {
       },
     };
 
-    const response = await client.create(facture);
-    alert("Facture sauvegarder dans ton espace avec succès !");
+    const id = route.query.id
+    if (id) {
+      // Si l'ID existe, mise à jour du document
+      try {
+        await client
+            .patch(id)
+            .set(facture)
+            .commit();
+        alert("Facture modifié dans ton espace avec succès !");
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour de la facture :', error);
+      }
+    } else {
+      // Si l'ID n'existe pas, création d'un nouveau document
+      try {
+        await client.create(facture);
+        alert("Facture sauvegarder dans ton espace avec succès !");
+      } catch (error) {
+        console.error('Erreur lors de la création de la facture :', error);
+      }
+    }
   }
 };
 

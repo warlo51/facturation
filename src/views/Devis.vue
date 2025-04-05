@@ -1,17 +1,94 @@
 <script setup>
 import {ref, computed, watch, onBeforeMount, onMounted} from "vue";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, PDFName, rgb } from "pdf-lib";
 import {client} from "../../sanity.js";
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const user = ref([]);
 const artisan = ref({});
+// Champs du formulaire
+const pdfBlob = ref(null);
+const nomClient = ref("");
+const adresseClient = ref("");
+const cpClient = ref("");
+const dateDevis = ref("");
+const numeroDevis = ref("");
+const sections = ref([]);
+const pdfUrl = ref("");
+
+//recuperation si id present
+
+onMounted(async () => {
+  const id = route.query.id
+  if (id) {
+    const query = `*[_type == "devis" && _id == "${id}"][0]{
+  _id,
+  title,
+  date,
+  client,
+  fichier{
+    asset->{
+      _id,
+      url
+    }
+  },
+  professionnel->{
+    _id,
+    title
+  }
+}`;
+    const params = {id}
+    const result = await client.fetch(query, params)
+
+    modifierDevis(result.fichier?.asset?.url)
+  }
+})
+
+const modifierDevis = async (url) => {
+  // Chargement du PDF existant
+  const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer());
+  const pdfDoc = await PDFDocument.load(existingPdfBytes, { updateMetadata: true });
+
+  const ref = pdfDoc.catalog.get(PDFName.of('DevisJSON'));
+  const devisJsonObj = pdfDoc.context.lookup(ref);
+
+  let docJson = devisJsonObj.value();
+  const decodedJson = docJson
+      .replace(/#7B/g, '{')  // Remplacer #7B par {
+      .replace(/#7D/g, '}')  // Remplacer #7D par }
+      .replace(/#5B/g, '[')  // Remplacer #5B par [
+      .replace(/#5D/g, ']')  // Remplacer #5D par ]
+      .replace(/#20/g, ' ')  // Remplacer #20 par espace
+      .replace(/#22/g, '"');
+
+  let cleanJson = decodedJson.replace('[DEVIS_JSON]', '');
+  cleanJson = cleanJson.substring(1);
+
+  const devisData = JSON.parse(cleanJson);
+
+  if (!devisData) {
+    console.error('Aucune donnée DevisJSON trouvée dans le catalogue du PDF.');
+    return;
+  }
+
+  numeroDevis.value = devisData.numero || '';
+  artisan.value = devisData.artisan || '';
+  dateDevis.value = devisData.date || '';
+
+  nomClient.value = devisData.client?.nom || '';
+  adresseClient.value = devisData.client?.adresse || '';
+  cpClient.value = devisData.client?.cp || '';
+
+  sections.value = devisData.sections || [];
+};
 
 function splitStringAvoidWordCut(str, maxLength) {
   let start = 0;
+
   const result = [];
   while (start < str.length) {
     let end = start + maxLength;
-
     // Si le mot est coupé, on ajuste la fin pour le découper à un espace
     if (end < str.length && str[end] !== ' ' && str.lastIndexOf(' ', end) > start) {
       end = str.lastIndexOf(' ', end); // Trouver la dernière espace avant 'end'
@@ -42,15 +119,6 @@ onMounted(async () => {
   await fetchProfessionnels()
 })
 
-// Champs du formulaire
-const pdfBlob = ref(null);
-const nomClient = ref("");
-const adresseClient = ref("");
-const cpClient = ref("");
-const dateDevis = ref("");
-const numeroDevis = ref("");
-const sections = ref([]);
-const pdfUrl = ref("");
 
 // Ajouter une section (titre)
 const ajouterTitre = () => {
@@ -141,7 +209,7 @@ const genererPDF = async () => {
       const total = ligne.quantite === 0 || ligne.quantite === null ? '' : totalLigne(ligne).toFixed(2) + " €";
       const values = [ligne.label, quantite, pu, total];
 
-      const maxWidth = 45;
+      const maxWidth = 60;
 
       const labelsLines = splitStringAvoidWordCut(ligne.label,maxWidth );
 
@@ -182,9 +250,28 @@ const genererPDF = async () => {
   y -= 20;
   page.drawText(`Bon pour travaux. "`, { x: 50, y, size: 9, color: rgb(0, 0, 0) });
 
- const pdfBytes = await pdfDoc.save();
+  const devisData = {
+    numero: numeroDevis.value,
+    artisan: artisan.value,
+    date: dateDevis.value,
+    client: {
+      nom: nomClient.value,
+      adresse: adresseClient.value,
+      cp: cpClient.value
+    },
+    sections: sections.value
+  };
+
+  const jsonText = `[DEVIS_JSON]${JSON.stringify(devisData)}`;
+  const jsonValue = pdfDoc.context.obj(jsonText); // crée une chaîne PDF propre
+
+// Ici on met "DevisJSON" comme clé, et la chaîne JSON comme valeur
+  pdfDoc.catalog.set(PDFName.of('DevisJSON'), jsonValue);
+  const pdfBytes = await pdfDoc.save();
+
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
   pdfUrl.value = URL.createObjectURL(blob);
+
   pdfBlob.value = new Blob([pdfBytes], { type: "application/pdf" });
 };
 
@@ -213,9 +300,28 @@ const telechargerPDF = async () => {
         _ref: user.value[0]?._id,
       },
     };
+    const id = route.query.id
+    if (id) {
+      // Si l'ID existe, mise à jour du document
+      try {
+        await client
+            .patch(id)  // Patch du document existant
+            .set(devis) // Modifie les champs avec les nouvelles valeurs
+            .commit();  // Envoie la mise à jour
+        alert("Devis modifié dans ton espace avec succès !");
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du devis :', error);
+      }
+    } else {
+      // Si l'ID n'existe pas, création d'un nouveau document
+      try {
+        await client.create(devis);
+        alert("Devis sauvegarder dans ton espace avec succès !");
+      } catch (error) {
+        console.error('Erreur lors de la création du devis :', error);
+      }
+    }
 
-    await client.create(devis);
-    alert("Devis sauvegarder dans ton espace avec succès !");
   }
 };
 

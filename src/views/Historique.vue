@@ -6,6 +6,7 @@ const user = ref([]);
 const clientNom = ref("");
 const listeFactures = ref([]);
 const watchPdf = ref("")
+const objectToUpdate = ref("")
 
 const fetchProfessionnels = async () => {
   const query = `*[_type == "professionnel"]`;
@@ -53,10 +54,22 @@ const rechercher = async () => {
 }`;
     const [result1, result2] = await Promise.all([client.fetch(query), client.fetch(query2)]);
     const list = [...result1, ...result2];
+
     listeFactures.value = list;
   }
 };
 
+const deletePdf = async (id) => {
+  await client.delete(id);
+  alert("Suppression réalisée avec succès !");
+}
+const getUrl = (file) => {
+  if(file.title.includes("Fact")){
+    objectToUpdate.value = `/facture?id=${file._id}`;
+    return
+  }
+  objectToUpdate.value = `/devis?id=${file._id}`;
+}
 </script>
 
 <template>
@@ -80,7 +93,13 @@ const rechercher = async () => {
           <td class="px-4 py-2 text-gray-700">{{ list.title }}</td>
           <td class="px-4 py-2 text-gray-700">{{ list.date }}</td>
           <td class="px-4 py-2">
+            <router-link :to="objectToUpdate"><button @click="getUrl(list)" class="ml-6 text-red-500">Modifier</button></router-link>
+          </td>
+          <td class="px-4 py-2">
             <button @click="watchPdf = list.fichier?.asset?.url" class="ml-6 text-red-500">Voir</button>
+          </td>
+          <td class="px-4 py-2">
+            <button @click="deletePdf(list._id)" class="ml-6 text-red-500">Supprimer</button>
           </td>
         </tr>
         </tbody>
