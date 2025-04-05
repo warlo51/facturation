@@ -131,7 +131,7 @@ const genererPDF = async () => {
       const total = ligne.quantite === 0 || ligne.quantite === null ? '' : totalLigne(ligne).toFixed(2) + " €";
       const values = [ligne.label, quantite, pu, total];
 
-      const maxWidth = 38;
+      const maxWidth = 45;
 
       const labelsLines = splitStringAvoidWordCut(ligne.label,maxWidth );
 
