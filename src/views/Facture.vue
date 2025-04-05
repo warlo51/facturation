@@ -40,6 +40,32 @@ onMounted(async () => {
     const params = {id}
     const result = await client.fetch(query, params)
     modifierFacture(result.fichier?.asset?.url)
+  }else{
+    const query = `*[_type == "professionnel"]`;
+    const professionnels = await client.fetch(query);
+    user.value = professionnels.filter((pro) => pro.email === 'cmansuy51@gmail.com')
+
+    const query2 = `*[_type == "facture" && professionnel._ref == "${user.value[0]._id}"]{
+  _id,
+  title,
+  date,
+  client,
+  fichier{
+    asset->{
+      _id,
+      url
+    }
+  },
+  professionnel->{
+    _id,
+    title
+  }
+}`;
+    const result = await client.fetch(query2)
+    const numFact = result.map((list) => list.title.split("-")[2])
+    const plusgrand= numFact.reduce((max, current) => parseInt(current) > parseInt(max) ? current : max);
+    const plusGrandAvecUn = (parseInt(plusgrand) + 1).toString().padStart(3, '0');
+    numeroFacture.value = plusGrandAvecUn;
   }
 })
 
