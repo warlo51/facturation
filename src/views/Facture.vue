@@ -39,6 +39,7 @@ onMounted(async () => {
 }`;
     const params = {id}
     const result = await client.fetch(query, params)
+    console.log(result)
     modifierFacture(result.fichier?.asset?.url)
   }else{
     const query = `*[_type == "professionnel"]`;
@@ -62,6 +63,7 @@ onMounted(async () => {
   }
 }`;
     const result = await client.fetch(query2)
+
     const numFact = result.map((list) => list.title.split("-")[2])
     const plusgrand= numFact.reduce((max, current) => parseInt(current) > parseInt(max) ? current : max);
     const plusGrandAvecUn = (parseInt(plusgrand) + 1).toString().padStart(3, '0');
@@ -79,12 +81,90 @@ const modifierFacture = async (url) => {
 
   let docJson = factureJsonObj.value();
   const decodedJson = docJson
-      .replace(/#7B/g, '{')  // Remplacer #7B par {
-      .replace(/#7D/g, '}')  // Remplacer #7D par }
-      .replace(/#5B/g, '[')  // Remplacer #5B par [
-      .replace(/#5D/g, ']')  // Remplacer #5D par ]
-      .replace(/#20/g, ' ')  // Remplacer #20 par espace
-      .replace(/#22/g, '"');
+      .replace(/#7B/g, '{')   // {
+      .replace(/#7D/g, '}')   // }
+      .replace(/#5B/g, '[')   // [
+      .replace(/#5D/g, ']')   // ]
+      .replace(/#20/g, ' ')   // espace
+      .replace(/#22/g, '"')   // "
+      .replace(/#2C/g, ',')   // ,
+      .replace(/#3A/g, ':')   // :
+      .replace(/#3B/g, ';')   // ;
+      .replace(/#2E/g, '.')   // .
+      .replace(/#2F/g, '/')   // /
+      .replace(/#5C/g, '\\')  // \
+      .replace(/#26/g, '&')   // &
+      .replace(/#27/g, "'")   // apostrophe
+      .replace(/#28/g, '(')   // (
+      .replace(/#29/g, ')')   // )
+      .replace(/#3F/g, '?')   // ?
+      .replace(/#21/g, '!')   // !
+      .replace(/#40/g, '@')   // @
+      .replace(/#23/g, '#')   // #
+      .replace(/#24/g, '$')   // $
+      .replace(/#25/g, '%')   // %
+      .replace(/#2B/g, '+')   // +
+      .replace(/#3D/g, '=')   // =
+
+      // Lettres accentuées
+      .replace(/#E0/g, 'à')
+      .replace(/#E1/g, 'á')
+      .replace(/#E2/g, 'â')
+      .replace(/#E3/g, 'ã')
+      .replace(/#E4/g, 'ä')
+      .replace(/#E5/g, 'å')
+      .replace(/#E6/g, 'æ')
+      .replace(/#E7/g, 'ç')
+      .replace(/#E8/g, 'è')
+      .replace(/#E9/g, 'é')
+      .replace(/#EA/g, 'ê')
+      .replace(/#EB/g, 'ë')
+      .replace(/#EC/g, 'ì')
+      .replace(/#ED/g, 'í')
+      .replace(/#EE/g, 'î')
+      .replace(/#EF/g, 'ï')
+      .replace(/#F0/g, 'ð')
+      .replace(/#F1/g, 'ñ')
+      .replace(/#F2/g, 'ò')
+      .replace(/#F3/g, 'ó')
+      .replace(/#F4/g, 'ô')
+      .replace(/#F5/g, 'õ')
+      .replace(/#F6/g, 'ö')
+      .replace(/#F9/g, 'ù')
+      .replace(/#FA/g, 'ú')
+      .replace(/#FB/g, 'û')
+      .replace(/#FC/g, 'ü')
+      .replace(/#FF/g, 'ÿ')
+
+      // Majuscules accentuées
+      .replace(/#C0/g, 'À')
+      .replace(/#C1/g, 'Á')
+      .replace(/#C2/g, 'Â')
+      .replace(/#C3/g, 'Ã')
+      .replace(/#C4/g, 'Ä')
+      .replace(/#C5/g, 'Å')
+      .replace(/#C6/g, 'Æ')
+      .replace(/#C7/g, 'Ç')
+      .replace(/#C8/g, 'È')
+      .replace(/#C9/g, 'É')
+      .replace(/#CA/g, 'Ê')
+      .replace(/#CB/g, 'Ë')
+      .replace(/#CC/g, 'Ì')
+      .replace(/#CD/g, 'Í')
+      .replace(/#CE/g, 'Î')
+      .replace(/#CF/g, 'Ï')
+      .replace(/#D1/g, 'Ñ')
+      .replace(/#D2/g, 'Ò')
+      .replace(/#D3/g, 'Ó')
+      .replace(/#D4/g, 'Ô')
+      .replace(/#D5/g, 'Õ')
+      .replace(/#D6/g, 'Ö')
+      .replace(/#D9/g, 'Ù')
+      .replace(/#DA/g, 'Ú')
+      .replace(/#DB/g, 'Û')
+      .replace(/#DC/g, 'Ü')
+      .replace(/#DF/g, 'ß');
+
 
   let cleanJson = decodedJson.replace('[FACTURE_JSON]', '');
   cleanJson = cleanJson.substring(1);
